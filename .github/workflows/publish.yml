@@ -1,0 +1,42 @@
+# Publishes @sentimentracker/signals-mcp to npm when a `v*` tag is pushed.
+#
+# Auth is npm trusted publishing (OIDC): no NPM_TOKEN, no passkey prompt.
+# npmjs.com must list this workflow as the package's trusted publisher
+# (package Settings > Trusted publisher > GitHub Actions: Aether-Grid /
+# sentimentracker-signals-mcp / publish.yml). Provenance is attached
+# automatically, so the npm page shows where the tarball was built.
+#
+# Release: bump package.json + src/version.ts, commit, `git tag vX.Y.Z`,
+# `git push origin main vX.Y.Z`.
+name: publish
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+      # Trusted publishing needs npm 11.5.1 or newer; Node 22 ships npm 10.
+      - run: npm install -g npm@latest
+      - run: pnpm install --frozen-lockfile
+      - name: tag must match package.json
+        run: |
+          pkg="v$(node -p "require('./package.json').version")"
+          test "$pkg" = "${GITHUB_REF_NAME}" || { echo "tag ${GITHUB_REF_NAME} != package.json ${pkg}"; exit 1; }
+      - run: pnpm test
+      - run: npm publish --provenance --access public

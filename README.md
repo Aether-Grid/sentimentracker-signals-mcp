@@ -175,6 +175,12 @@ LLM
 - API-key scopes beyond `signals:read` (e.g. `signals:subscribe`, `meta:read`); scopes are enforced per route today
 - Hosted remote transport (Streamable HTTP + OAuth 2.1) alongside stdio
 
+## Releasing
+
+1. Bump `version` in `package.json` and `SERVER_VERSION` in `src/version.ts` (a test keeps them equal).
+2. Commit, then `git tag vX.Y.Z` and `git push origin main vX.Y.Z`.
+3. The `publish` workflow runs the tests and publishes to npm through trusted publishing, with provenance. No token or passkey is involved.
+
 ## License
 
 MIT
