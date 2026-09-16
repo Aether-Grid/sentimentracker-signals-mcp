@@ -1,6 +1,6 @@
 {
   "name": "@sentimentracker/signals-mcp",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Model Context Protocol server exposing Sentimentracker's proprietary indicator signals (sniperV3 / momentumUltimaPlus / structurePro / strongBuyStrongSell / momAlgoV15 / institutionalAlgo / etc.) as LLM-callable tools. Wraps the Sentimentracker /superchart/indicators routes; the indicator catalog is read live from the backend.",
   "keywords": [
     "mcp",
