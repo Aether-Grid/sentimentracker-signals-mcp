@@ -1,0 +1,60 @@
+{
+  "name": "@sentimentracker/signals-mcp",
+  "version": "0.2.0",
+  "description": "Model Context Protocol server exposing Sentimentracker's proprietary indicator signals (sniperV3 / momentumUltimaPlus / structurePro / strongBuyStrongSell / momAlgoV15 / institutionalAlgo / etc.) as LLM-callable tools. Wraps the Sentimentracker /superchart/indicators routes; the indicator catalog is read live from the backend.",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "sentimentracker",
+    "trading-signals",
+    "indicators",
+    "llm",
+    "agent"
+  ],
+  "license": "MIT",
+  "homepage": "https://sentimentracker.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Aether-Grid/sentimentracker-signals-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Aether-Grid/sentimentracker-signals-mcp/issues"
+  },
+  "author": "Sentimentracker",
+  "type": "module",
+  "bin": {
+    "sentimentracker-signals-mcp": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "INSTALL-CLAUDE-DESKTOP.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "start": "node dist/index.js",
+    "test": "vitest --run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepublishOnly": "pnpm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "zod": "^3.24.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.37",
+    "typescript": "^5.6.0",
+    "vitest": "^4.0.8"
+  },
+  "engines": {
+    "node": ">=18.17.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
