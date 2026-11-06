@@ -67,18 +67,21 @@ The backend gates every indicator behind a premium subscription, so the JWT / AP
 
 ## Install + run
 
+From npm (requires Node.js):
+
 ```bash
-# Local dev
+SNT_SIGNALS_API_KEY=snt_mcp_... npx -y @sentimentracker/signals-mcp
+```
+
+Claude Desktop setup, with the config file location on macOS and Windows, is in [INSTALL-CLAUDE-DESKTOP.md](INSTALL-CLAUDE-DESKTOP.md). Claude Code: `claude mcp add sentimentracker-signals --env SNT_SIGNALS_API_KEY=snt_mcp_... -- npx -y @sentimentracker/signals-mcp`.
+
+Local development:
+
+```bash
 cd sentimentracker-signals-mcp
 pnpm install
 pnpm build
 SNT_SIGNALS_SESSION_TOKEN=<your-jwt> node dist/index.js
-```
-
-Once published to npm:
-
-```bash
-npx -y @sentimentracker/signals-mcp
 ```
 
 ## Env reference

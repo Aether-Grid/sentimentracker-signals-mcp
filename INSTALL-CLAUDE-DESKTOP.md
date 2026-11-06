@@ -1,163 +1,101 @@
-# Wire `@sentimentracker/signals-mcp` into Claude Desktop (macOS)
+# Connect `@sentimentracker/signals-mcp` to Claude Desktop
 
-Five steps. Read-only by nature (no signing surface), so the only sensitive bit is your session token — don't commit the config file to git.
+Four steps. The server only reads signals and has no signing surface, so the one sensitive value is your API key. Do not commit the config file to git.
 
-## 1 — Build the package once
+You need Node.js installed (Claude Desktop starts the server with `npx`) and an active SentimenTracker Pro subscription.
 
-```bash
-cd /Applications/Claude-VS/Sentimentracker-App/sentimentracker-signals-mcp
-pnpm install
-pnpm build
-```
+## 1. Create an API key
 
-Confirms `dist/index.js` exists.
+In the app, open Settings, then API keys, and click Create API Key. Copy the `snt_mcp_…` key straight away: it is shown once.
 
-## 2 — Get an auth credential
+Keys expire one year after creation. Rotate one from the same page (the old key keeps working for 24 hours) or revoke it there.
 
-You have two options. Both require an active premium subscription.
+## 2. Open the Claude Desktop config file
 
-### Option A — API key (recommended)
+In Claude Desktop, open Settings, then Developer, then Edit Config. That opens `claude_desktop_config.json`, creating it if needed:
 
-```bash
-# Log into sentimentracker.com first, copy your session JWT from DevTools
-curl -X POST https://api.sentimentracker.com/api/api-keys \
-  -H "Authorization: Bearer <YOUR_SESSION_JWT>" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Claude Desktop on this Mac", "scope": "signals:read"}'
-```
+| OS | Path |
+|---|---|
+| macOS | `~/Library/Application Support/Claude/claude_desktop_config.json` |
+| Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
 
-Response includes `data.plaintext`: `snt_mcp_<24 chars>`. **Capture it immediately** — it's only shown once. Keys expire one year after minting. List via `GET /api-keys`, rotate via `POST /api-keys/:id/rotate` (old key keeps working for 24 hours), revoke via `DELETE /api-keys/:id`. All of this is also in the app under Settings → API keys.
-
-### Option B — Session JWT (quick / dev)
-
-1. Log into [sentimentracker.com](https://sentimentracker.com)
-2. DevTools → Application → Cookies (or local storage) → copy session JWT
-3. Refresh manually when you see `AUTH_EXPIRED` (typically 7-30 days)
-
-## 3 — Open / create the Claude Desktop config
-
-```bash
-open ~/Library/Application\ Support/Claude/
-```
-
-If `claude_desktop_config.json` doesn't exist:
-
-```bash
-touch ~/Library/Application\ Support/Claude/claude_desktop_config.json
-```
-
-## 4 — Paste config
-
-> If `mcpServers` already has other entries (e.g. `sentimentracker-hyperliquid`), only add the `sentimentracker-signals` key inside it — don't overwrite the whole block.
-
-Using the API key (recommended):
+## 3. Paste the config
 
 ```json
 {
 	"mcpServers": {
 		"sentimentracker-signals": {
-			"command": "node",
-			"args": ["/Applications/Claude-VS/Sentimentracker-App/sentimentracker-signals-mcp/dist/index.js"],
+			"command": "npx",
+			"args": ["-y", "@sentimentracker/signals-mcp"],
 			"env": {
-				"SNT_SIGNALS_ENDPOINT": "https://api.sentimentracker.com/api",
-				"SNT_SIGNALS_API_KEY": "snt_mcp_PASTE_YOUR_API_KEY_HERE",
-				"SNT_SIGNALS_DEFAULT_PROVIDER": "hyperliquid"
+				"SNT_SIGNALS_API_KEY": "snt_mcp_PASTE_YOUR_API_KEY_HERE"
 			}
 		}
 	}
 }
 ```
 
-OR using a session JWT:
+If the file already has an `mcpServers` block (for example with `sentimentracker-hyperliquid`), add only the `sentimentracker-signals` entry inside it. Do not overwrite the whole block.
 
-```json
-{
-	"mcpServers": {
-		"sentimentracker-signals": {
-			"command": "node",
-			"args": ["/Applications/Claude-VS/Sentimentracker-App/sentimentracker-signals-mcp/dist/index.js"],
-			"env": {
-				"SNT_SIGNALS_ENDPOINT": "https://api.sentimentracker.com/api",
-				"SNT_SIGNALS_SESSION_TOKEN": "PASTE_YOUR_PREMIUM_SESSION_JWT_HERE",
-				"SNT_SIGNALS_DEFAULT_PROVIDER": "hyperliquid"
-			}
-		}
-	}
-}
-```
+`SNT_SIGNALS_ENDPOINT` defaults to production (`https://api.sentimentracker.com/api`), so it only needs setting for staging or local development. Optional settings are listed under "Env reference" in the README.
 
-If you also want the trading MCP at the same time:
+## 4. Restart and check
 
-```json
-{
-	"mcpServers": {
-		"sentimentracker-signals": {
-			"command": "node",
-			"args": ["/Applications/Claude-VS/Sentimentracker-App/sentimentracker-signals-mcp/dist/index.js"],
-			"env": {
-				"SNT_SIGNALS_SESSION_TOKEN": "PASTE_YOUR_JWT",
-				"SNT_SIGNALS_DEFAULT_PROVIDER": "hyperliquid"
-			}
-		},
-		"sentimentracker-hyperliquid": {
-			"command": "node",
-			"args": ["/Applications/Claude-VS/Sentimentracker-App/sentimentracker-hyperliquid-mcp/dist/index.js"],
-			"env": {
-				"SNT_HL_MODE": "propose",
-				"SNT_HL_MASTER_ADDRESS": "0xYOUR_MASTER_EOA"
-			}
-		}
-	}
-}
-```
+Quit Claude Desktop completely (on macOS, Claude, then Quit Claude; closing the window is not enough) and open it again. In a new chat, the tools menu should list `sentimentracker-signals` with 6 tools.
 
-## 5 — Restart + verify
-
-```bash
-osascript -e 'quit app "Claude"'
-sleep 2
-open -a Claude
-```
-
-In a fresh chat:
-
-```
-/mcp
-```
-
-Should show `sentimentracker-signals` with 4 tools.
-
-First call — should always work:
+First call, which should always work:
 
 > Use `sentimentracker-signals` `list_indicators` to show me every indicator and its signal type.
 
-Then try a real signal (needs your JWT + premium):
+Then a real signal:
 
-> Use `get_indicator_signal` to fetch the current `sniperV3` signal for BTC on the 15m chart. Then `get_signal_confluence` across `sniperV3`, `momentumUltimaPlus`, `structurePro`, `strongBuyStrongSell` for the same symbol — tell me if there's directional agreement.
+> Use `get_indicator_signal` to fetch the current `sniperV3` signal for BTC on the 15m chart. Then `get_signal_confluence` across `sniperV3`, `momentumUltimaPlus`, `structurePro`, `strongBuyStrongSell` for the same symbol and tell me if there's directional agreement.
 
 ## Logs
 
 ```bash
+# macOS
 tail -F ~/Library/Logs/Claude/mcp-server-sentimentracker-signals.log
-tail -F ~/Library/Logs/Claude/mcp*.log
 ```
+
+On Windows the logs are in `%APPDATA%\Claude\logs`.
 
 ## Troubleshooting
 
-| Symptom | Cause / fix |
+| Symptom | Cause and fix |
 |---|---|
-| `AUTH_MISSING` at boot | No `SNT_SIGNALS_SESSION_TOKEN` set |
-| `AUTH_EXPIRED` on every call | JWT expired (re-copy from sentimentracker.com) or the API key expired / was revoked (rotate it in Settings → API keys) |
-| `AUTH_PREMIUM_REQUIRED` | Account isn't premium / sub expired, or the key lacks the `signals:read` scope |
-| `BACKEND_RATE_LIMITED` | Per second bucket, 3 open subscriptions, or the 50,000 calls per month key quota — see the hint for when to retry |
-| `BACKEND_TIMEOUT` | Network slow — raise `SNT_SIGNALS_REQUEST_TIMEOUT_MS` (default 15000) |
-| `BACKEND_HTTP_ERROR status=502` | Backend transient — retry, check status |
-| `ENOENT: node` | Claude Desktop's `PATH` doesn't include Homebrew node. Use absolute: `/opt/homebrew/bin/node` (Apple Silicon) or `/usr/local/bin/node` (Intel) |
-| `Cannot find module .../dist/index.js` | Forgot `pnpm build` |
-| Tool returns null `latestSide` | Indicator's metadata shape doesn't match the confluence extractor's heuristics — read the raw envelope via `get_indicator_signal` |
+| Server exits at start with "Invalid environment configuration" | The key is missing or still the placeholder. Paste the full `snt_mcp_…` key |
+| `ENOENT` for `npx` | Claude Desktop cannot find Node.js. Install Node.js, or on macOS set `"command"` to the absolute path from `which npx` (for example `/opt/homebrew/bin/npx` on Apple Silicon) |
+| `AUTH_EXPIRED` on every call | The API key expired or was revoked. Rotate or create one in Settings, then API keys |
+| `AUTH_PREMIUM_REQUIRED` | The account has no active Pro plan, or the key lacks the `signals:read` scope |
+| `BACKEND_RATE_LIMITED` | Per second limit, 3 open subscriptions, or the 50,000 calls per key per month quota. The hint says when to retry |
+| `BACKEND_TIMEOUT` | Slow network. Raise `SNT_SIGNALS_REQUEST_TIMEOUT_MS` (default 15000) |
+| `BACKEND_HTTP_ERROR status=502` | Temporary backend error. Retry |
+| Tool returns null `latestSide` | The indicator's metadata shape doesn't match the confluence extractor's heuristics. Read the raw envelope with `get_indicator_signal` |
 
-## Best-practice queries
+## Best practice queries
 
-> What does the Sentimentracker indicator system say about ETH right now on 1h? Walk through `get_signal_confluence` for the 5 directional ones, then for any conflicting signal, dig in with `get_indicator_signal` to compare metadata.
+> What does the SentimenTracker indicator system say about ETH right now on 1h? Walk through `get_signal_confluence` for the 5 directional ones, then for any conflicting signal, dig in with `get_indicator_signal` to compare metadata.
 
-> Compare `momentumUltimaPlus` on BTC at 15m vs 1h vs 4h. Highlight any TF where the active trade direction disagrees with the others.
+> Compare `momentumUltimaPlus` on BTC at 15m vs 1h vs 4h. Highlight any timeframe where the active trade direction disagrees with the others.
+
+## Running from a source checkout (developers)
+
+Build once with `pnpm install && pnpm build`, then point Claude Desktop at the build instead of npm:
+
+```json
+{
+	"mcpServers": {
+		"sentimentracker-signals": {
+			"command": "node",
+			"args": ["/absolute/path/to/sentimentracker-signals-mcp/dist/index.js"],
+			"env": {
+				"SNT_SIGNALS_ENDPOINT": "https://api-stg.sentimentracker.com/api",
+				"SNT_SIGNALS_API_KEY": "snt_mcp_PASTE_A_STAGING_KEY"
+			}
+		}
+	}
+}
+```
+
+A session JWT also works for quick tests: set `SNT_SIGNALS_SESSION_TOKEN` instead of `SNT_SIGNALS_API_KEY` and refresh it when calls return `AUTH_EXPIRED`.
